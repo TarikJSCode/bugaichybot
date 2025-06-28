@@ -1,4 +1,3 @@
-
 import logging
 import re
 import os
@@ -70,7 +69,7 @@ FEMALE_NAMES_DECLENSION = {
     'Іванна': 'Іванну', 'Кіра': 'Кіру', 'Любов': 'Любов',
     'Мілена': 'Мілену', 'Неля': 'Нелю', 'Орися': 'Орисю',
     'Руслана': 'Руслану', 'Слава': 'Славу', 'Тіана': 'Тіану',
-    'Ульяна': 'Ульяну', 'Фелісія': 'Фелісію', 'Хрістя': 'Хрістю',
+    'Ульяна': 'Ульяну', 'Фелісія': 'Фелісію', 'Хрістя': 'Христю',
     'Цвітана': 'Цвітану', 'Шура': 'Шуру', 'Яна': 'Яну'
 }
 
@@ -840,10 +839,8 @@ async def handle_action_command(update: Update, context: ContextTypes.DEFAULT_TY
     action = match.group(1).strip()
     target_username = match.group(2).strip()
     rest_text = match.group(3).strip() if match.group(3) else ""
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    # обробка webhook
-    # Перевіряємо чи це не команда для пар
+
+    # Перевіряємо чи це команда для пар
     if action in COUPLE_COMMANDS:
         return
 
@@ -936,7 +933,7 @@ application = Application.builder().token(BOT_TOKEN).build()
 async def setup_application():
     """Налаштовує додаток та обробники"""
     await setup_bot_commands(application)
-    
+
     # Додаємо обробники команд
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", start_command))
@@ -956,26 +953,19 @@ def index():
     return "Telegram Bot з системою стосунків працює! 💕"
 
 @app.route('/webhook', methods=['POST'])
-def webhook():
+async def webhook():
     """Обробник webhook від Telegram"""
     try:
         # Отримуємо дані від Telegram
         json_data = request.get_json()
-        
+
         if json_data:
             # Створюємо Update об'єкт
             update = Update.de_json(json_data, application.bot)
-            
-            # Обробляємо update в новому потоці
-            def run_async():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(application.process_update(update))
-                loop.close()
-            
-            thread = threading.Thread(target=run_async)
-            thread.start()
-            
+
+            # Обробляємо update
+            await application.process_update(update)
+
         return "OK", 200
     except Exception as e:
         logger.error(f"Помилка в webhook: {e}")
@@ -985,7 +975,7 @@ async def set_webhook():
     """Встановлює webhook для бота"""
     # Визначаємо URL для webhook
     webhook_url = f"https://{os.getenv('REPL_SLUG')}.{os.getenv('REPL_OWNER')}.repl.co/webhook"
-    
+
     try:
         # Встановлюємо webhook
         await application.bot.set_webhook(url=webhook_url)
@@ -998,16 +988,16 @@ def main():
     # Налаштовуємо додаток в асинхронному режимі
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     # Ініціалізуємо додаток
     loop.run_until_complete(setup_application())
-    
+
     # Встановлюємо webhook
     loop.run_until_complete(set_webhook())
-    
+
     print("🚀 Бот запущений з webhook системою стосунків...")
     print("🌐 Flask сервер запускається на 0.0.0.0:5000")
-    
+
     # Запускаємо Flask сервер
     app.run(host='0.0.0.0', port=5000, debug=False)
 
