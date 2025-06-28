@@ -6,7 +6,7 @@ import random
 from datetime import datetime, timedelta
 from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember, BotCommand
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ChatMemberHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 import asyncio
 import threading
 
@@ -927,11 +927,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # Ініціалізуємо Flask додаток
 app = Flask(__name__)
 
-# Ініціалізуємо Telegram Application
-application = Application.builder().token(BOT_TOKEN).build()
+# Створюємо глобальну змінну для application
+application = None
 
 async def setup_application():
     """Налаштовує додаток та обробники"""
+    global application
+    application = Application.builder().token(BOT_TOKEN).build()
+    
     await setup_bot_commands(application)
 
     # Додаємо обробники команд
@@ -940,6 +943,7 @@ async def setup_application():
     application.add_handler(CommandHandler("flipcoin", flipcoin_command))
     application.add_handler(CommandHandler("relationships", relationships_command))
     application.add_handler(CommandHandler("myrelationships", my_relationships_command))
+    application.add_handler(CommandHandler("proposals", proposals_command))
     application.add_handler(CommandHandler("commands", commands_command))
     application.add_handler(CallbackQueryHandler(button_callback))
 
@@ -953,18 +957,25 @@ def index():
     return "Telegram Bot з системою стосунків працює! 💕"
 
 @app.route('/webhook', methods=['POST'])
-async def webhook():
+def webhook():
     """Обробник webhook від Telegram"""
     try:
         # Отримуємо дані від Telegram
         json_data = request.get_json()
 
-        if json_data:
+        if json_data and application:
             # Створюємо Update об'єкт
             update = Update.de_json(json_data, application.bot)
 
-            # Обробляємо update
-            await application.process_update(update)
+            # Обробляємо update в новому потоці
+            def run_async():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(application.process_update(update))
+                loop.close()
+
+            thread = threading.Thread(target=run_async)
+            thread.start()
 
         return "OK", 200
     except Exception as e:
