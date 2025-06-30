@@ -922,11 +922,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 # Звичайна дія
                 await handle_action_command(update, context)
 
-def main() -> None:
+async def main() -> None:
     """Запускає бота"""
     application = Application.builder().token(BOT_TOKEN).build()
 
-    application.post_init = setup_bot_commands
+    # Налаштування команд бота
+    await setup_bot_commands(application)
 
     # Додаємо обробники команд
     application.add_handler(CommandHandler("start", start_command))
@@ -934,6 +935,7 @@ def main() -> None:
     application.add_handler(CommandHandler("flipcoin", flipcoin_command))
     application.add_handler(CommandHandler("relationships", relationships_command))
     application.add_handler(CommandHandler("myrelationships", my_relationships_command))
+    application.add_handler(CommandHandler("proposals", proposals_command))
     application.add_handler(CommandHandler("commands", commands_command))
     application.add_handler(CallbackQueryHandler(button_callback))
 
@@ -941,8 +943,9 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.COMMAND, handle_message))
 
-    print("Бот запущений з новою системою стосунків...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    print("🤖 Бот запущений у polling режимі з новою системою стосунків...")
+    await application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
